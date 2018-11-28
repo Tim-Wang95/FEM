@@ -5,12 +5,15 @@ close all; clear; clc;
 E = 100; A1 = 1; A2 = 2; L = 10;
 alphaT = 0.001; deltaT = 30;
 
+% assign values
+Elast = [E;E;E;E;E]; area = [A1;A1;A2;A2;A2]; leng = [(sqrt(2)*L);(sqrt(2)*L);L;L;L];
+ang = [pi/4;3*pi/4;0;0;0];
+
 % local stiffness
-K(:,:,1) = E*A1/(sqrt(2)*L)*localstiffness(pi/4);
-K(:,:,2) = E*A1/(sqrt(2)*L)*localstiffness(3*pi/4);
-K(:,:,3) = E*A2/L*localstiffness(0);
-K(:,:,4) = E*A2/L*localstiffness(0); 
-K(:,:,5) = E*A2/L*localstiffness(0);
+K = zeros(4,4,5);
+for mem=1:5
+   K(:,:,mem) = Elast(mem)*area(mem)/leng(mem)*localstiffness(ang(mem)); 
+end
 
 % element freedom table
 EFT(:,1) = [1 2 7 8]; EFT(:,2) = [3 4 9 10]; EFT(:,3) = [5 6 7 8];
@@ -42,7 +45,16 @@ end
 % total reaction forces
 K_*U-F_T
 
-%% Local matrix function
+% compute the member forces
+u = zeros(4,1,5); f = zeros(5,1); T = zeros(4,4,5);
+for mem=1:5
+    T(:,:,mem) = transformM(ang(mem)); u(:,:,mem) = T(:,:,mem)*U(EFT(:,mem));
+    f(mem) = Elast(mem)*area(mem)/leng(mem)*(u(3,1,mem)-u(1,1,mem));
+end
+
+
+%% Functions and Definitions
+% local matrix function
 function Ke = localstiffness(theta)
     Ke(1,1:4) = [cos(theta)^2 sin(theta)*cos(theta) -cos(theta)^2 -sin(theta)*cos(theta)];
     Ke(2,1:4) = [sin(theta)*cos(theta) sin(theta)^2 -sin(theta)*cos(theta) -sin(theta)^2];
@@ -50,4 +62,10 @@ function Ke = localstiffness(theta)
     Ke(4,1:4) = [-sin(theta)*cos(theta) -sin(theta)^2 sin(theta)*cos(theta) sin(theta)^2];
 end
 
-
+% coord. transform matrix
+function T = transformM(theta)
+    T(1,1:4) = [cos(theta) sin(theta) 0 0];
+    T(2,1:4) = [-sin(theta) cos(theta) 0 0];
+    T(3,1:4) = [0 0 cos(theta) sin(theta)];
+    T(4,1:4) = [0 0 -sin(theta) cos(theta)];
+end
